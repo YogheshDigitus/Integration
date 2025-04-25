@@ -1,11 +1,13 @@
 # new package to add to requirement are scikit-learn, requests, pdfplumber
 import os
 import math
+import subprocess
+from reportlab.pdfgen import canvas
 import chromadb.api
-import pythoncom
+#import pythoncom
 import chromadb
 import numpy as np
-from docx2pdf import convert
+#from docx2pdf import convert
 import fitz  # PyMuPDF
 from io import BytesIO
 from PIL import Image
@@ -29,18 +31,37 @@ from openai import OpenAI
 # import json
 from dotenv import load_dotenv
 # import requests
+import openai
+from dotenv import load_dotenv
 
+load_dotenv()  # Load environment variables from .env
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
 #setting up the OpenAI API key 
 #chroma_client = chromadb.PersistentClient(path=r"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\VectorDB")# can also use server local
 #path= r"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\Transformers"
 # Initialize CLIP model and processor from Hugging Face
 
-path= r"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\Transformers"
+path= "/root/Chatbot/Integration/Transformers/"
 clip_model = CLIPModel.from_pretrained(path)
 clip_processor = CLIPProcessor.from_pretrained(path)
 device = "cpu"
 clip_model.to(device)
 
+def txt_to_pdf(txt_path, pdf_path):
+    c = canvas.Canvas(pdf_path)
+    with open(txt_path, 'r') as f:
+        lines = f.readlines()
+    y = 800
+    for line in lines:
+        c.drawString(40, y, line.strip())
+        y -= 15
+    c.save()
+
+def docx_to_pdf(docx_path):
+    output_dir = os.path.dirname(docx_path)
+    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", docx_path, "--outdir", output_dir])
+    return os.path.splitext(docx_path)[0] + ".pdf"
 
 
 class CSVProcessor:
@@ -85,7 +106,8 @@ class PDFProcessor:
         data_loader = ImageLoader()
 
         #Below path should be changed based on the user case
-        output_text_file_path=fr"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\Summary\{filename}{self.file_extension}.text" 
+        output_text_file_path=f"/root/Chatbot/{filename}{self.file_extension}.text" 
+        print(output_text_file_path)
         text_file = open(output_text_file_path, 'w',encoding='utf-8')
         for page_num in range(len(doc)):
             page = doc.load_page(page_num)
@@ -117,7 +139,7 @@ class PDFProcessor:
         chunks=self.Text_chunker(output_text_file_path)
 
         # Persistant path should also be changed based on the use case
-        persist_directory= r"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\VectorDB"
+        persist_directory= r"/root/Chatbot/VectorDB"
         Chroma_client = chromadb.PersistentClient(persist_directory)
         collection3=Chroma_client.get_or_create_collection(
         name='multimodel_collection_1',
@@ -141,7 +163,8 @@ class PDFProcessor:
                 images=image_arrays,
                 metadatas=[{"type":"image"} for i in range(len(ids_img))]
             )
-
+        print(output_text_file_path)
+        return output_text_file_path
  # the function return the text and the image path where the extracted images are saved   
 
 
@@ -214,17 +237,25 @@ def process_file(file_path):
     
     if file_extension == '.csv':
         processor = CSVProcessor(file_path)
-    elif file_extension in ['.txt','.docx']:
-        pythoncom.CoInitialize()
-        output_path=f"{os.path.splitext(file_path)[0]}.pdf"
-        convert(file_path,output_path)
-        processor=PDFProcessor(output_path,file_extension)
+    elif file_extension == '.txt':
+        output_path = f"{os.path.splitext(file_path)[0]}.pdf"
+        txt_to_pdf(file_path, output_path)
+        processor = PDFProcessor(output_path, file_extension)
+
+    elif file_extension == '.docx':
+        output_path = docx_to_pdf(file_path)
+        processor = PDFProcessor(output_path, file_extension)
+#    elif file_extension in ['.txt','.docx']:
+#        pythoncom.CoInitialize()
+#        output_path=f"{os.path.splitext(file_path)[0]}.pdf"
+#       convert(file_path,output_path)
+#        processor=PDFProcessor(output_path,file_extension)
     elif file_extension=='.pdf':
         processor = PDFProcessor(file_path,file_extension)
     else:
         raise ValueError(f"Unsupported file type: {file_extension}")
     print(filename)
-    processor.process(filename)
+    return(processor.process(filename))
 
 def get_text_from_Pdf(file_path):
         doc = fitz.open(file_path)

@@ -95,7 +95,7 @@ def is_requesting_image(user_query):
         return False
 
 def rag_pipeline_with_prompt(query):
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = llm = OllamaLLM(model="qwen2.5:1.5b")
     # Define your prompt template
     template = """
     You are a help desk technician called Lilis from Linxens company. You are interacting with a user who is asking you questions about the company's issues. Based on the following user question and context provided, please give detailed answer to the user question.
@@ -171,7 +171,7 @@ def rag_pipeline_with_prompt(query):
     return result # for testing image is not included
 
 def Get_summary(context):
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = OllamaLLM(model="qwen2.5:1.5b")
     # # Now, prepare the retriever if necessary (same as before)
     template = """
     Your are providing the summary of the document the user has upload.
