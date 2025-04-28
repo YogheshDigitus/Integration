@@ -1,14 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+import shutil
 from pydantic import BaseModel
 from CLIP_DocumentProcessor_Open_AI import process_file, get_text_from_Pdf
 from OpenAI_rag_chain_version_testing import rag_pipeline_with_prompt, Get_summary        # Existing import 
-
+from QWEN2_5_1_5B_ragechain_test import rag_pipeline_with_prompt as Local_rag, Get_summary as Local_summary
 app = FastAPI()
 
-# Data model for the /summarize endpoint
+# Set the origins you want to allow, or use ["*"] to allow all (for development only)
+origins = [
+    "http://localhost:3000",        # If frontend is running locally
+    "http://127.0.0.1:3000",
+    "http://your-frontend-domain.com",  # Replace with your actual frontend domain
+    "*"  # Allow all origins (not recommended in production)
+]
 
-class DocumentProcessing(BaseModel):
-    Path:str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Or ["*"] for public access
+    allow_credentials=True,
+    allow_methods=["*"],     # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],     # Allow all headers
+)
+# Data model for the /summarize endpoint
 
 class Question(BaseModel):
     text: str
@@ -19,9 +33,15 @@ class RespondRequest(BaseModel):
 
 # Endpoint 1: Calls get_summary from CLIP_open_AI.py
 @app.post("/Processing/")
-async def Document_proc(data: DocumentProcessing):
-    Output_dir=process_file(data.Path)
-    summary=Get_summary(Output_dir)
+async def Document_proc(file: UploadFile = File(...)):
+    file_location = f"./uploaded_files/{file.filename}"
+    # Save the file directly without reading it
+    with open(file_location, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    Output_dir=process_file(file_location)
+    print(Output_dir)
+    context=get_text_from_Pdf(Output_dir)
+    summary=Get_summary(context)
     return {"summary": summary}
 
 # Endpoint 1: Calls rag_pipeline_with_prompt from  OpenAI RAG pipliene
@@ -30,3 +50,21 @@ async def summarize_contract(data: Question):
     response = rag_pipeline_with_prompt(data.text)
     return {"response": response}
 
+# Endpoint 1: Calls get_summary from CLIP_open_AI.py
+@app.post("/Local_model_Processing/")
+async def Document_proc(file: UploadFile = File(...)):
+    file_location = f"./uploaded_files/{file.filename}"
+    # Save the file directly without reading it
+    with open(file_location, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    Output_dir=process_file(file_location)
+    print(Output_dir)
+    context=get_text_from_Pdf(Output_dir)
+    summary=Lcoal_summary(context)
+    return {"summary": summary}
+
+# Endpoint 1: Calls rag_pipeline_with_prompt from  OpenAI RAG pipliene
+@app.post("/Local_model_response/")
+async def summarize_contract(data: Question):
+    response = Local_rag(data.text)
+    return {"response": response}
