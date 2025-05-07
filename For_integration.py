@@ -4,6 +4,7 @@ import shutil
 from pydantic import BaseModel
 from CLIP_DocumentProcessor_Open_AI_with_image import process_file, get_text_from_Pdf
 from OpenAI_rag_chain_version_testing import rag_pipeline_with_prompt, Get_summary        # Existing import 
+from QWEN2_5_1_5B_ragechain_test import rag_pipeline_with_prompt as Local_rag 
 app = FastAPI()
 
 # Set the origins you want to allow, or use ["*"] to allow all (for development only)
@@ -64,7 +65,7 @@ async def summarize_contract(data: Question):
 #    return {"summary": summary}
 
 # Endpoint 1: Calls rag_pipeline_with_prompt from  OpenAI RAG pipliene
-#@app.post("/Local_model_response/")
-#async def summarize_contract(data: Question):
-#    response = Local_rag(data.text)
-#    return {"response": response}
+@app.post("/Local_model_response/")
+async def summarize_contract(data: Question):
+    response,image_path = Local_rag(data.text)
+    return {"response": response,"image":image_path}
