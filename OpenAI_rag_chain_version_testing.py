@@ -1,7 +1,7 @@
 from langchain.chains import RetrievalQA
 from sklearn.metrics.pairwise import cosine_similarity
-from langchain_ollama.llms import OllamaLLM
 import re
+import json
 # from langchain.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from chromadb.utils.embedding_functions import OpenCLIPEmbeddingFunction
@@ -35,7 +35,6 @@ import openai
 import os
 
 client = OpenAI()
-chroma_client = chromadb.PersistentClient(path="/root/Chatbot/VectorDB")# can also use server local
 # Define your API key
 # openai.api_key = 'your_openai_api_key'
 
@@ -115,7 +114,7 @@ def rag_pipeline_with_prompt(query):
     )
 
     # Load ChromaDB client
-    persist_directory = "/root/Chatbot/VectorDB"
+    persist_directory = "/root/Integration/VectorDB"
     chroma_client = chromadb.PersistentClient(persist_directory)
     clip_embeddings = CLIPEmbeddings()
     # Retrieve the collection that contains your embeddings (assuming it's stored under a name like "documents")
@@ -128,15 +127,14 @@ def rag_pipeline_with_prompt(query):
     n_results=5,
     )
     documents = query_result["documents"]
-    print(query_result)
     distances = query_result["distances"]
     image_path_dic=query_result["metadatas"][0]
-    print(image_path_dic)
-    image_path=[]
-    for img in image_path_dic:
-        if 'image' in img:        
-            image_path=image_path+[img['image']]
-
+    print(image_path_dic[0]['image_file'])
+    path=image_path_dic[0]['image_file']
+    index=image_path_dic[0]['image_ref_num']
+    with open(path, 'r') as f:
+        image_list = json.load(f)
+    image_path=image_list[index]
 #----------------------------------------Commenting out the image retrieval part-------------------------------#
     # if is_requesting_image(query)==True:
     #     query_result_image = collection.query(
@@ -168,7 +166,7 @@ def rag_pipeline_with_prompt(query):
     )
     print(f"context of the query is {context}")
     result = rag_chain.invoke({"question": query,"context":context})
-    return result # for testing image is not included
+    return result,image_path # for testing image is not included
 
 def Get_summary(context):
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
