@@ -26,6 +26,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+for Header_Footer_processing import crop_fixed_header_footer_and_remove_images 
 # from langchain.docstore.document import Document
 from openai import OpenAI
 # import json
@@ -38,11 +39,9 @@ load_dotenv()  # Load environment variables from .env
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 #setting up the OpenAI API key 
-#chroma_client = chromadb.PersistentClient(path=r"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\VectorDB")# can also use server local
-#path= r"C:\Users\DELL\Desktop\Chatbot\My_chat_bot\Transformers"
 # Initialize CLIP model and processor from Hugging Face
 
-path= "/root/Chatbot/Integration/Transformers/"
+path= "/root/Integration/Transformers/"
 clip_model = CLIPModel.from_pretrained(path)
 clip_processor = CLIPProcessor.from_pretrained(path)
 device = "cpu"
@@ -106,7 +105,7 @@ class PDFProcessor:
         data_loader = ImageLoader()
 
         #Below path should be changed based on the user case
-        output_text_file_path=f"/root/Chatbot/{filename}{self.file_extension}.text" 
+        output_text_file_path=f"/root/Integration/{filename}{self.file_extension}.text" 
         print(output_text_file_path)
         text_file = open(output_text_file_path, 'w',encoding='utf-8')
         for page_num in range(len(doc)):
@@ -139,7 +138,7 @@ class PDFProcessor:
         chunks=self.Text_chunker(output_text_file_path)
 
         # Persistant path should also be changed based on the use case
-        persist_directory= r"/root/Chatbot/VectorDB"
+        persist_directory= r"/root/Integration/VectorDB"
         Chroma_client = chromadb.PersistentClient(persist_directory)
         collection3=Chroma_client.get_or_create_collection(
         name='multimodel_collection_1',
@@ -251,6 +250,8 @@ def process_file(file_path):
 #       convert(file_path,output_path)
 #        processor=PDFProcessor(output_path,file_extension)
     elif file_extension=='.pdf':
+        output_path=f"/root/Integration/working_folder/{filename}_modified.pdf"
+        crop_fixed_header_footer_and_remove_images(file_path,output_path)
         processor = PDFProcessor(file_path,file_extension)
     else:
         raise ValueError(f"Unsupported file type: {file_extension}")

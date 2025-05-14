@@ -99,7 +99,7 @@ class PDFProcessor:
                                 image_path = os.path.join(output_image_dir, image_filename)
                                 image.save(image_path)
                                 print(image_path)
-                                image_match_list[page_num][img_index]=image_path
+                                image_match_list[page_num][img_index]=os.path.basename(image_path)
                 metadata=metadata+[ {'subject': self.subject,'type':'text','file_type': 'PPT','image_ref_num':page_num,"image_file":image_mapping_file} for i in chunk]
                 chunks=chunks+chunk
         with open(image_mapping_file, 'w') as f:
